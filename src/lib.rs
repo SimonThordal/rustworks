@@ -10,7 +10,7 @@ use rand::seq::SliceRandom;
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Graph {
     adjacency_matrix: Array2<usize>,
-    nodelist: Vec<usize>
+    nodelist: Vec<Node>
 }
 
 impl Graph {
@@ -21,7 +21,28 @@ impl Graph {
     pub fn save(&self, filename: &str) -> io::Result<()> {
         let serialized = serde_json::to_string(&self).unwrap();
         fs::write(filename, serialized)
-    }   
+    }
+
+    pub fn new() -> Self {
+        Self {
+            ..Self::default()
+        }
+    }
+
+    pub fn add_nodes_from(mut self, nodes: Vec<Node>) -> Self {
+        self.nodelist.extend(nodes);
+        self
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Node {
+    identifer: NodeIdentifier
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+enum NodeIdentifier {
+    Int(usize)
 }
 
 impl Default for Graph {
@@ -74,8 +95,14 @@ mod tests {
         assert_eq!(graph.adjacency_matrix.shape(), [4,4]);
     }
 
-    fn nodes_and_edges_can_be_added_to_an_empty_graph()
-    {
+    #[test]
+    fn it_can_create_an_empty_graph() {
+        let graph = crate::Graph::new();
+        assert_eq!(graph.adjacency_matrix.shape(), [0,0]);
+    }
+
+    fn nodes_and_edges_can_be_added_to_an_empty_graph() {
+        let graph = crate::Graph::new();
 
     }
 }

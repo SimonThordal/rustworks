@@ -33,10 +33,6 @@ impl Graph {
         }
     }
 
-    pub fn add_node_from() {
-        
-    }
-
     pub fn add_nodes_from(&mut self, nodes: Vec<impl AddsToGraph>) {
         for node in nodes.into_iter() {
             node.add_to_graph(self)

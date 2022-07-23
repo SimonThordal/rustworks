@@ -1,124 +1,12 @@
-use std::io::Read;
-use std::fs::{self, File};
-use std::io;
-use std::convert::From;
-use std::collections::HashMap;
 use ndarray::Array2;
-use serde::{Serialize, Deserialize};
+use std::io::Read;
+use std::fs::{File};
 use serde_json;
 use rand::prelude::*;
 use rand::seq::SliceRandom;
 
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Graph {
-    adjacency_matrix: Array2<usize>,
-    nodes: HashMap<NodeIdentifier, Node>,
-    edges: Vec<Edge>
-}
-
-impl Graph {
-    pub fn print(&self) -> () {
-        println!("{}", &self.adjacency_matrix);
-    }
-
-    pub fn save(&self, filename: &str) -> io::Result<()> {
-        let serialized = serde_json::to_string(&self).unwrap();
-        fs::write(filename, serialized)
-    }
-
-    pub fn new() -> Self {
-        Self {
-            ..Self::default()
-        }
-    }
-
-    pub fn add_nodes_from(&mut self, nodes: Vec<impl AddsToGraph>) {
-        for node in nodes.into_iter() {
-            node.add_to_graph(self)
-        }
-    }
-
-    pub fn add_edges_from(&mut self, edges: Vec<Edge>) {
-        let nodes: Vec<NodeIdentifier> = edges.iter().map(|edge| [edge.source.clone(), edge.target.clone()]).flatten().collect();
-        self.edges.extend(edges);
-        self.add_nodes_from(nodes);
-    }
-}
-
-pub trait AddsToGraph {
-    fn add_to_graph(self, graph: &mut Graph);
-}
-
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Hash, Clone)]
-enum NodeIdentifier {
-    Int(usize),
-    Text(String)
-}
-
-impl AddsToGraph for NodeIdentifier {
-    fn add_to_graph(self, graph: &mut Graph) {
-        if !graph.nodes.contains_key(&self) {
-            let node = Node {
-                identifier: self.clone()
-            };
-            graph.nodes.insert(self.clone(), node);
-        }
-    }
-}
-
-impl AddsToGraph for Node {
-    fn add_to_graph(self, graph: &mut Graph) {
-        graph.nodes.insert(self.identifier.clone(), self);
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Node {
-    identifier: NodeIdentifier
-}
-
-impl From<usize> for Node {
-    fn from(identifer: usize) -> Self {
-        Node {
-            identifier: NodeIdentifier::Int(identifer)
-        }
-    }
-}
-
-impl From<String> for Node {
-    fn from(identifier: String) -> Self {
-        Node {
-            identifier: NodeIdentifier::Text(identifier)
-        }
-    }
-}
-
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Edge {
-    source: NodeIdentifier,
-    target: NodeIdentifier
-}
-
-impl From<(Node, Node)> for Edge {
-    fn from(tuple: (Node, Node)) -> Self {
-        Edge {
-            source: tuple.0.identifier.clone(),
-            target: tuple.1.identifier.clone()
-        }
-    }
-}
-
-impl Default for Graph {
-    fn default() -> Graph {
-        Graph {
-            adjacency_matrix: Array2::zeros((0,0)),
-            nodes: HashMap::new(),
-            edges: Vec::new()
-        }
-    }
-}
+mod graphs;
+use graphs::{Graph, Edge, Node};
 
 pub fn generate_graph(n: usize) -> Graph {
     let mut graph = Graph {
@@ -167,11 +55,11 @@ mod tests {
     fn nodes_can_be_added_to_a_graph() {
         // When we have an empty graph
         let mut graph = crate::Graph::new();
-        // We can nodes with integer identifiers to it
+        // We can add nodes with integer identifiers to it
         let nodes: Vec<crate::Node> = vec![1,2,3].into_iter().map(|val| crate::Node::from(val)).collect();
         graph.add_nodes_from(nodes);
         assert_eq!(3, graph.nodes.len());
-        // And we can keep adding nodes with different identifiers to it without problems
+        // And we can keep adding nodes with different identifiers to it
         let nodes: Vec<crate::Node> = vec![
             String::from("a"),
             String::from("b"),
@@ -179,17 +67,33 @@ mod tests {
         ].into_iter().map(|val| crate::Node::from(val)).collect();
         graph.add_nodes_from(nodes);
         assert_eq!(6, graph.nodes.len());
+        // A single node can be added to the graph
+        graph.add_node(crate::Node::from("foo"));
+        assert_eq!(7, graph.nodes.len());
     }
 
     #[test]
     fn edges_can_be_added_between_nodes() {
         // When we have an empty graph
         let mut graph = crate::Graph::new();
+        // And a collection of edges
         let edges: Vec<crate::Edge> = vec![(1,2),(2,3), (1,3)].into_iter().map(|val| 
             crate::Edge::from((crate::Node::from(val.0), crate::Node::from(val.1)))
         ).collect();
+        // We can add the edges to the graph
         graph.add_edges_from(edges);
         assert_eq!(3, graph.edges.len());
+        // And any nodes in the edges will be added as well
         assert_eq!(3, graph.nodes.len());
+    }
+
+    #[test]
+    fn an_edge_can_be_added_between_nodes() {
+        let source = crate::Node::from("foo");
+        let target = crate::Node::from("bar");
+        source.add_edge_to(&target);
+        assert_eq!(1, source.edges.len());
+        assert_eq!(1, target.edges.len());
+
     }
 }

@@ -10,9 +10,8 @@ use serde_json;
 
 /// A struct containing the nodes and edges that make up a graph
 /// ```rust
-/// g = Graph::new()
+/// let g = Graph::new();
 /// ```
-
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Graph {
     pub adjacency_matrix: Array2<usize>,
@@ -38,10 +37,11 @@ impl Graph {
 
     /// Add a node to the graph
     ///
-    pub fn add_node(&mut self, node: Node) {
+    pub fn add_node(&mut self, node: impl AddsToGraph) {
         node.add_to_graph(self)
     }
 
+    // Add multiple nodes to the graph
     pub fn add_nodes_from(&mut self, nodes: Vec<impl AddsToGraph>) {
         for node in nodes.into_iter() {
             node.add_to_graph(self)
@@ -134,6 +134,7 @@ pub struct Edge {
     target: NodeIdentifier
 }
 
+// Edges
 impl From<(Node, Node)> for Edge {
     fn from(tuple: (Node, Node)) -> Self {
         Edge {
